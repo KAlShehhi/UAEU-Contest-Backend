@@ -1,98 +1,9 @@
 const asyncHandler = require('express-async-handler');
 const User = require('../models/userModle');
 const Activity = require('../models/activityModle');
-const mongoose = require('mongoose')
+const UserRegisterActivity = require('../models/userRegisterActivityModel');
+const UserAttendance = require('../models/userAttendanceModel');
 const moment = require('moment');
-
-//  @desc   Get activity
-//  @route  GET /api/activity/get/:id
-//  @access Public
-const getActivity = asyncHandler(async(req, res) => {
-    if(!req.params.id){ 
-        return res.status(400).json({
-            msg: 'No activity ID provided'
-        });
-    }
-    try {
-        const activityId = req.params.id
-        const activity = await Activity.findById(activityId);
-        if(!activity){
-            return res.status(400).json({
-                message: 'Activity does not exist'
-            });
-        }
-        return res.status(200).json({
-            activity
-        })
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({
-            error: error.message
-        });
-    }
-});
-
-//  @desc   Get all activities for coach
-//  @route  GET /api/activity/get/:id
-//  @access Public
-const getCoachActivities = asyncHandler(async (req, res) => {
-    if (!req.params.id) { 
-        return res.status(400).json({
-            msg: 'No user ID provided'
-        });
-    }
-    try {
-        const userId = req.params.id;
-        const user = await User.findById(userId);
-
-        if (!user) {
-            return res.status(400).json({
-                message: 'User does not exist'
-            });
-        }
-        if (user.role !== 'COACH') {
-            return res.status(401).json({
-                message: 'Unauthorized'
-            });
-        }
-        const activities = await Activity.find({ coachId: userId });
-        const now = new Date();
-        const completed = [];
-        const upcoming = [];
-        activities.forEach(activity => {
-            const activityDate = new Date(activity.dateObject);
-            const activityObject = activity.toObject(); 
-            if (activityObject.campus === 'MALE') {
-                activityObject.campus = 'Male';
-            } else if (activityObject.campus === 'FEMALE') {
-                activityObject.campus = 'Female';
-            }
-            if (activityDate <= now) {
-                completed.push(activityObject);
-            } else {
-                const daysUntil = Math.ceil((activityDate - now) / (1000 * 60 * 60 * 24));
-                activityObject.when = `In ${daysUntil} day${daysUntil > 1 ? 's' : ''}`;
-                upcoming.push(activityObject);
-            }
-        });
-        return res.status(200).json({
-            completed,
-            upcoming
-        });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({
-            error: error.message
-        });
-    }
-});
-
-//  @desc   Get all activities that a user has registered too
-//  @route  GET /api/activity/getRegistered/:id
-//  @access Public
-const getRegistered = asyncHandler(async(req, res) => {
-
-});
 
 //  @desc   Create activity
 //  @route  POST /api/activity/create/
@@ -296,11 +207,288 @@ const deleteActivity = asyncHandler(async(req, res) => {
     }
 });
 
+//  @desc   Get activity
+//  @route  GET /api/activity/get/:id
+//  @access Public
+const getActivity = asyncHandler(async(req, res) => {
+    if(!req.params.id){ 
+        return res.status(400).json({
+            msg: 'No activity ID provided'
+        });
+    }
+    try {
+        const activityId = req.params.id
+        const activity = await Activity.findById(activityId);
+        if(!activity){
+            return res.status(400).json({
+                message: 'Activity does not exist'
+            });
+        }
+        return res.status(200).json({
+            activity
+        })
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            error: error.message
+        });
+    }
+});
+
+//  @desc   Get all activities for coach
+//  @route  GET /api/activity/get/:id
+//  @access Public
+const getCoachActivities = asyncHandler(async (req, res) => {
+    if (!req.params.id) {
+        return res.status(400).json({
+            msg: 'No user ID provided'
+        });
+    }
+    try {
+        const userId = req.params.id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(400).json({
+                message: 'User does not exist'
+            });
+        }
+        if (user.role !== 'COACH') {
+            return res.status(401).json({
+                message: 'Unauthorized'
+            });
+        }
+        const activities = await Activity.find({ coachId: userId });
+        // Get today's date and set the time to 00:00:00
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const now = new Date(); // current time
+        const completed = [];
+        const upcoming = [];
+        activities.forEach(activity => {
+            const activityDate = new Date(activity.dateObject);
+            const activityObject = activity.toObject();
+            // Convert campus enum to readable format
+            if (activityObject.campus === 'MALE') {
+                activityObject.campus = 'Male';
+            } else if (activityObject.campus === 'FEMALE') {
+                activityObject.campus = 'Female';
+            }
+            // Check if the activity date is today or in the future
+            if (activityDate < today) {
+                completed.push(activityObject);
+            } else {
+                const daysUntil = Math.ceil((activityDate - now) / (1000 * 60 * 60 * 24));
+                activityObject.when = `In ${daysUntil} day${daysUntil > 1 ? 's' : ''}`;
+                upcoming.push(activityObject);
+            }
+        });
+
+        return res.status(200).json({
+            completed,
+            upcoming
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            error: error.message
+        });
+    }
+});
+
+//  @desc   Mark a user's attendance
+//  @route  POST /api/activity/markAttendance/
+//  @access Private
+const markAttendance = asyncHandler(async (req, res) => {
+    const { scannedVale, userId } = req.body;
+    try {
+        // Check user role
+        const user = await User.findById(userId);
+        if (user.role !== 'COACH') {
+            return res.status(401).json({
+                message: 'Unauthorized'
+            });
+        }
+        // Split scanned value
+        const [scannedUserId, activityId] = scannedVale.split("-");
+        // Check if user already scanned
+        const alreadyScanned = await UserAttendance.find({ userId: scannedUserId, activityId: activityId });
+        if (alreadyScanned.length > 0) {
+            return res.status(403).json({
+                message: 'User already scanned'
+            });
+        }
+
+        // Check if activity exists
+        const activity = await Activity.findById(activityId);
+        if (!activity) {
+            return res.status(400).json({
+                message: 'Activity does not exist'
+            });
+        }
+
+        // Check if scanned user exists
+        const scannedUser = await User.findById(scannedUserId);
+        if (!scannedUser) {
+            return res.status(400).json({
+                message: 'User does not exist'
+            });
+        }
+
+        // Update coach points
+        const updatedUser = await User.findById(scannedUserId);
+        if (!updatedUser) {
+            return res.status(400).json({
+                message: 'User does not exist'
+            });
+        }
+        
+        updatedUser.points += activity.points;
+        await updatedUser.save();
+
+        // Create new attendance record
+        const newAttendance = await UserAttendance.create({
+            userId: scannedUserId,
+            activityId: activityId
+        });
+
+        if (!newAttendance) {
+            return res.status(500).json({
+                message: 'Failed to create attendance record'
+            });
+        }
+
+        return res.status(200).json({
+            message: 'Attendance marked successfully'
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message: 'Server Error',
+            error: error.message
+        });
+    }
+});
+
+
+//  @desc   Register a user to an activity
+//  @route  POST /api/activity/registerUser/
+//  @access Private
+const registerUser = asyncHandler(async (req, res) => {
+    try {
+        const { userId, activityId } = req.body;
+        if (!activityId) {
+            return res.status(400).json({
+                message: 'No activity ID provided'
+            });
+        }
+        const activity = await Activity.findById(activityId);
+        if (!activity) {
+            return res.status(400).json({
+                message: 'Activity does not exist'
+            });
+        }
+        const alreadyRegistered = await UserRegisterActivity.findOne({ userId, activityId });
+        if (alreadyRegistered) {
+            return res.status(400).json({
+                message: 'User already registered'
+            });
+        }
+        if(activity.attendees + 1 > activity.expectedAttendees){
+            return res.status(400).json({
+                message: 'Full'
+            });
+        }
+        const registerUser = await UserRegisterActivity.create({ userId, activityId });
+        const updatedActivity = await Activity.findByIdAndUpdate(activityId, {
+            attendees: activity.attendees+1
+        })
+        if (!registerUser) {
+            return res.status(500).json({
+                error: 'Failed to register user'
+            });
+        }
+
+        if(!updatedActivity){
+            return res.status(500).json({
+                error: 'Failed to register user'
+            });
+
+        }
+        return res.status(200).json({
+            message: 'User registered successfully'
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            error: error.message
+        });
+    }
+});
+
+//  @desc   Get all activities that the user has not registered for
+//  @route  POST /api/activity/getUnregisterdActivites/
+//  @access Private
+const getUnregisterdActivites = asyncHandler(async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const registeredActivities = await UserRegisterActivity.find({ userId }).select('activityId');
+        const registeredActivityIds = registeredActivities.map(ra => ra.activityId);
+        const unregisteredActivities = await Activity.find({
+            _id: { $nin: registeredActivityIds },
+            dateObject: { $gte: today }
+        }).populate('coachId', 'firstName lastName');
+        const activitiesWithCoachName = unregisteredActivities.map(activity => {
+            const coachName = `${activity.coachId.firstName} ${activity.coachId.lastName}`;
+            return { ...activity._doc, coachName };
+        });
+        return res.status(200).json(activitiesWithCoachName);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            error: error.message
+        });
+    }
+});
+
+
+//  @desc   Get all activities that the user has registered for
+//  @route  POST /api/activity/getRegisteredActivities/
+//  @access Private
+const getRegisteredActivities = asyncHandler(async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const registeredActivities = await UserRegisterActivity.find({ userId }).populate({
+            path: 'activityId',
+            populate: {
+                path: 'coachId',
+                select: 'firstName lastName'
+            }
+        });
+        const activitiesWithCoachName = registeredActivities.map(ra => {
+            const activity = ra.activityId;
+            const coachName = `${activity.coachId.firstName} ${activity.coachId.lastName}`;
+            return { ...activity._doc, coachName };
+        });
+        return res.status(200).json(activitiesWithCoachName);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            error: error.message
+        });
+    }
+});
+
 module.exports = {
     getActivity,
     getCoachActivities,
-    getRegistered,
+    markAttendance,
     createActivity,
     updateActivity,
-    deleteActivity
+    deleteActivity,
+    registerUser, 
+    getUnregisterdActivites,
+    getRegisteredActivities
 }

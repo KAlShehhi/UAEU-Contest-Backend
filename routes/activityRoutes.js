@@ -4,15 +4,22 @@ const { protect } = require('../middleware/auth')
 const {
     getActivity,
     getCoachActivities,
-    getRegistered,
+    markAttendance,
     createActivity,
     updateActivity,
-    deleteActivity
+    deleteActivity,
+    registerUser,
+    getUnregisterdActivites,
+    getRegisteredActivities
 } = require('../controllers/activityController');
 
 
 router.post('/create', protect, createActivity);
+router.post('/registerUser', protect, registerUser);
+router.post('/markAttendance', protect, markAttendance);
 router.get('/getCoachActivities/:id', getCoachActivities);
+router.post('/getUnregisterdActivites', protect, getUnregisterdActivites);
+router.post('/getRegisteredActivities', protect, getRegisteredActivities);
 router.put('/update/:id', protect, updateActivity);
 router.delete('/delete/:id', protect, deleteActivity);
 
