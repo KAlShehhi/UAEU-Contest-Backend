@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const UserRegisterActivitySchema = mongoose.Schema({
     activityId: {
@@ -16,4 +16,4 @@ const UserRegisterActivitySchema = mongoose.Schema({
     timestamps: true
 });
 
-module.exports = mongoose.model('UserRegisterActivity', UserRegisterActivitySchema);
+export default mongoose.model('UserRegisterActivity', UserRegisterActivitySchema);

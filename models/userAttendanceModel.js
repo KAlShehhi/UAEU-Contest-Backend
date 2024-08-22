@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const UserAttendanceSchema = mongoose.Schema({
     activityId: {
@@ -16,4 +16,4 @@ const UserAttendanceSchema = mongoose.Schema({
     timestamps: true
 });
 
-module.exports = mongoose.model('UserAttendance', UserAttendanceSchema);
+export default mongoose.model('UserAttendance', UserAttendanceSchema);

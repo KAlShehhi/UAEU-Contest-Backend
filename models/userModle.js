@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const UserSchema = mongoose.Schema({
     firstName: {
@@ -19,11 +19,15 @@ const UserSchema = mongoose.Schema({
     },
     points: {
         type: Number,
-        required: false
+        default: 0,
     },
     validated: {
         type: Boolean,
         default: false
+    },
+    profilePicture: {
+        type: String,
+        required: false,
     },
     role: {
         type: String,
@@ -34,4 +38,4 @@ const UserSchema = mongoose.Schema({
     timestamps: true
 });
 
-module.exports = mongoose.model('User', UserSchema);
+export default mongoose.model('User', UserSchema);

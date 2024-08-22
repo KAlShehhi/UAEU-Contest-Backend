@@ -1,9 +1,10 @@
-const asyncHandler = require('express-async-handler');
-const User = require('../models/userModle');
-const Activity = require('../models/activityModle');
-const UserRegisterActivity = require('../models/userRegisterActivityModel');
-const UserAttendance = require('../models/userAttendanceModel');
-const moment = require('moment');
+import asyncHandler from 'express-async-handler';
+import User from '../models/userModle.js';
+import Activity from '../models/activityModle.js';
+import UserRegisterActivity from '../models/userRegisterActivityModel.js';
+import UserAttendance from '../models/userAttendanceModel.js';
+import moment from 'moment';
+
 
 //  @desc   Create activity
 //  @route  POST /api/activity/create/
@@ -300,6 +301,7 @@ const getCoachActivities = asyncHandler(async (req, res) => {
 //  @access Private
 const markAttendance = asyncHandler(async (req, res) => {
     const { scannedVale, userId } = req.body;
+    console.log(123);
     try {
         // Check user role
         const user = await User.findById(userId);
@@ -460,6 +462,8 @@ const getUnregisterdActivites = asyncHandler(async (req, res) => {
 const getRegisteredActivities = asyncHandler(async (req, res) => {
     try {
         const { userId } = req.body;
+
+        // Find all activities the user has registered for
         const registeredActivities = await UserRegisterActivity.find({ userId }).populate({
             path: 'activityId',
             populate: {
@@ -467,12 +471,28 @@ const getRegisteredActivities = asyncHandler(async (req, res) => {
                 select: 'firstName lastName'
             }
         });
-        const activitiesWithCoachName = registeredActivities.map(ra => {
-            const activity = ra.activityId;
-            const coachName = `${activity.coachId.firstName} ${activity.coachId.lastName}`;
-            return { ...activity._doc, coachName };
-        });
-        return res.status(200).json(activitiesWithCoachName);
+
+        // Check if the user has attended each activity
+        const activitiesWithAttendance = await Promise.all(
+            registeredActivities.map(async (ra) => {
+                const activity = ra.activityId;
+
+                // Check if the user has attended this activity
+                const attendanceRecord = await UserAttendance.findOne({
+                    userId,
+                    activityId: activity._id
+                });
+
+                const coachName = `${activity.coachId.firstName} ${activity.coachId.lastName}`;
+                return { 
+                    ...activity._doc, 
+                    coachName, 
+                    attended: !!attendanceRecord // Set attended to true if a record exists, otherwise false
+                };
+            })
+        );
+
+        return res.status(200).json(activitiesWithAttendance);
     } catch (error) {
         console.error(error);
         return res.status(500).json({
@@ -481,7 +501,7 @@ const getRegisteredActivities = asyncHandler(async (req, res) => {
     }
 });
 
-module.exports = {
+export {
     getActivity,
     getCoachActivities,
     markAttendance,
@@ -491,4 +511,4 @@ module.exports = {
     registerUser, 
     getUnregisterdActivites,
     getRegisteredActivities
-}
+};

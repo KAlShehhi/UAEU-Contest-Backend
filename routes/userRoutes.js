@@ -1,16 +1,15 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-
-const {
+import {
     verifyToken,
     registerUser,
     loginUser,
     updateUser,
     deleteUser,
+    changeAvatar,
     getUser,
     getUserRole
-} = require('../controllers/userController');
-
+} from '../controllers/userController.js';
 
 router.post('/verifyToken',verifyToken);
 router.post('/register',registerUser);
@@ -19,6 +18,7 @@ router.put('/update/:id', updateUser);
 router.delete('/delete/:id', deleteUser)
 router.get('/getUser/:id', getUser)
 router.get('/getUserRole/:id', getUserRole)
+router.get('/changeAvatar/:id', changeAvatar)
 
 
-module.exports = router;
+export default router;

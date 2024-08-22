@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const ActivitySchema = mongoose.Schema({
     name: {
@@ -54,4 +54,4 @@ const ActivitySchema = mongoose.Schema({
     timestamps: true
 });
 
-module.exports = mongoose.model('Activity', ActivitySchema);
+export default mongoose.model('Activity', ActivitySchema);

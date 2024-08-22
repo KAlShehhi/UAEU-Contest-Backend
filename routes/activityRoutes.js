@@ -1,7 +1,7 @@
-const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/auth')
-const {
+import express from 'express';
+import { protect } from '../middleware/auth.js';
+import {
     getActivity,
     getCoachActivities,
     markAttendance,
@@ -11,7 +11,8 @@ const {
     registerUser,
     getUnregisterdActivites,
     getRegisteredActivities
-} = require('../controllers/activityController');
+} from '../controllers/activityController.js';
+
 
 
 router.post('/create', protect, createActivity);
@@ -25,4 +26,4 @@ router.delete('/delete/:id', protect, deleteActivity);
 
 
 
-module.exports = router;
+export default router;
