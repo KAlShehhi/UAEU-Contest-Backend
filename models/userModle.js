@@ -21,6 +21,14 @@ const UserSchema = mongoose.Schema({
         type: Number,
         default: 0,
     },
+    resetCode: {
+        type: Number,
+        default: 0,
+    },
+    allowResetPassword: {
+        type: Boolean,
+        default: false,
+    },
     validated: {
         type: Boolean,
         default: false
